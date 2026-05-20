@@ -169,7 +169,7 @@ def main():
 
     filters = load_filter_config(config_path)
     if not filters:
-        filters = [{"rule_id": "py/weak-cryptographic-algorithm", "needle": "cipher.decrypt"}]
+        print(f"Warning: no valid filters loaded from {config_path}. No results will be removed.", file=sys.stderr)
 
     sarif_file = sarif_files[0]
     data = load_sarif(sarif_file)
@@ -178,7 +178,7 @@ def main():
 
     print(f"Filtered SARIF file: {sarif_file}")
     print(f"Wrote filtered SARIF to: {output_path}")
-    print(f"Removed {removed} py/weak-cryptographic-algorithm result(s) from code containing 'cipher.decrypt'.")
+    print(f"Removed {removed} result(s) using filters from {config_path}.")
 
 
 if __name__ == "__main__":
