@@ -102,7 +102,7 @@ jobs:
     - name: Debug - inspect SARIF results
       run: python3 .github/codeql/debug_sarif.py
 
-    - name: Filter CodeQL SARIF for decrypt-specific weak crypto alerts
+    - name: Filter CodeQL SARIF results
       run: python3 .github/codeql/filter_codeql_sarif.py results results/filtered.sarif
 
     - name: Upload filtered SARIF

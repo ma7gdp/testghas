@@ -4,7 +4,7 @@
     "needle": "cipher.decrypt"
   },
   {
-    "rule_id": "py/insecure-temporary-file",
+    "rule_id": "py/xinsecure-temporary-file",
     "needle": "tempfile.mktemp"
   }
 ]
