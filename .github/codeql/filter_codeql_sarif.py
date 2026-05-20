@@ -18,6 +18,16 @@ def save_sarif(data, path):
         f.write("\n")
 
 
+def contains_decrypt(value):
+    if isinstance(value, str):
+        return "decrypt" in value.lower()
+    if isinstance(value, dict):
+        return any(contains_decrypt(v) for v in value.values())
+    if isinstance(value, list):
+        return any(contains_decrypt(v) for v in value)
+    return False
+
+
 def should_remove_result(result):
     if not isinstance(result, dict):
         return False
@@ -26,15 +36,7 @@ def should_remove_result(result):
     if rule_id != "py/weak-cryptographic-algorithm":
         return False
 
-    message = result.get("message", {})
-    if isinstance(message, str):
-        text = message
-    elif isinstance(message, dict):
-        text = message.get("text", "")
-    else:
-        text = ""
-
-    return "decrypt" in text.lower()
+    return contains_decrypt(result.get("message", {})) or contains_decrypt(result.get("locations", []))
 
 
 def filter_sarif(data):
