@@ -95,7 +95,7 @@ def load_filter_config(path):
     return filters
 
 
-def should_remove_result(result, filters):
+def should_adjust_result(result, filters):
     if not isinstance(result, dict):
         return False
 
@@ -118,26 +118,35 @@ def should_remove_result(result, filters):
     return False
 
 
+def set_result_severity_low(result):
+    if not isinstance(result, dict):
+        return
+
+    result["level"] = "note"
+    if "properties" not in result or not isinstance(result.get("properties"), dict):
+        result["properties"] = {}
+
+    result["properties"]["problem.severity"] = "low"
+    result["properties"]["securitySeverity"] = "low"
+    result["properties"]["security-severity"] = "low"
+
+
 def filter_sarif(data, filters):
     if not isinstance(data, dict) or "runs" not in data:
         return data, 0
 
-    removed = 0
+    adjusted = 0
     for run in data.get("runs", []):
         results = run.get("results")
         if not isinstance(results, list):
             continue
 
-        filtered = []
         for result in results:
-            if should_remove_result(result, filters):
-                removed += 1
-                continue
-            filtered.append(result)
+            if should_adjust_result(result, filters):
+                set_result_severity_low(result)
+                adjusted += 1
 
-        run["results"] = filtered
-
-    return data, removed
+    return data, adjusted
 
 
 def find_sarif_files(path):
@@ -173,12 +182,12 @@ def main():
 
     sarif_file = sarif_files[0]
     data = load_sarif(sarif_file)
-    filtered_data, removed = filter_sarif(data, filters)
+    filtered_data, adjusted = filter_sarif(data, filters)
     save_sarif(filtered_data, output_path)
 
     print(f"Filtered SARIF file: {sarif_file}")
     print(f"Wrote filtered SARIF to: {output_path}")
-    print(f"Removed {removed} result(s) using filters from {config_path}.")
+    print(f"Adjusted severity for {adjusted} result(s) using filters from {config_path}.")
 
 
 if __name__ == "__main__":
