@@ -4,6 +4,7 @@ import os
 import sys
 from glob import glob
 
+
 def load_sarif(path):
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -18,13 +19,52 @@ def save_sarif(data, path):
         f.write("\n")
 
 
-def contains_decrypt(value):
-    if isinstance(value, str):
-        return "decrypt" in value.lower()
-    if isinstance(value, dict):
-        return any(contains_decrypt(v) for v in value.values())
-    if isinstance(value, list):
-        return any(contains_decrypt(v) for v in value)
+def read_file_lines(file_path):
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            return f.readlines()
+    except Exception:
+        return []
+
+
+def code_contains_decrypt(result):
+    """Check if the actual source code at the result location contains 'decrypt'."""
+    locations = result.get("locations", [])
+    if not isinstance(locations, list):
+        return False
+    
+    for location in locations:
+        if not isinstance(location, dict):
+            continue
+        
+        physical = location.get("physicalLocation", {})
+        if not isinstance(physical, dict):
+            continue
+        
+        artifact = physical.get("artifactLocation", {})
+        if not isinstance(artifact, dict):
+            continue
+        
+        file_path = artifact.get("uri")
+        if not file_path:
+            continue
+        
+        region = physical.get("region", {})
+        if not isinstance(region, dict):
+            continue
+        
+        start_line = region.get("startLine", 1)
+        end_line = region.get("endLine", start_line)
+        
+        # Read the file and check if 'decrypt' appears in the range
+        lines = read_file_lines(file_path)
+        if lines:
+            # Convert 1-indexed line numbers to 0-indexed
+            relevant_lines = lines[start_line - 1 : end_line]
+            code_snippet = "".join(relevant_lines)
+            if "decrypt" in code_snippet.lower():
+                return True
+    
     return False
 
 
@@ -36,7 +76,8 @@ def should_remove_result(result):
     if rule_id != "py/weak-cryptographic-algorithm":
         return False
 
-    return contains_decrypt(result.get("message", {})) or contains_decrypt(result.get("locations", []))
+    # Check if the actual source code contains 'decrypt'
+    return code_contains_decrypt(result)
 
 
 def filter_sarif(data):
@@ -94,18 +135,7 @@ def main():
 
     print(f"Filtered SARIF file: {sarif_file}")
     print(f"Wrote filtered SARIF to: {output_path}")
-    print(f"Removed {removed} py/weak-cryptographic-algorithm result(s) containing 'decrypt'.")
-
-    # name: Print filtered SARIF summary
-    # run: python3 - <<'PY'
-    # import json
-    # with open('results/filtered.sarif', encoding='utf-8') as f:
-    #     data = json.load(f)
-    # for run in data.get('runs', []):
-    #     for r in run.get('results', []):
-    #         if r.get('ruleId') == 'py/weak-cryptographic-algorithm':
-    #             print(json.dumps(r, indent=2))
-    # PY
+    print(f"Removed {removed} py/weak-cryptographic-algorithm result(s) from code containing 'decrypt'.")
 
 
 if __name__ == "__main__":
