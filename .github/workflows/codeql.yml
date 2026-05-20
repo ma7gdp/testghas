@@ -100,7 +100,9 @@ jobs:
         upload: never
 
     - name: Debug - inspect SARIF results
-      run: python3 - <<'PY'
+      shell: bash
+      run: |
+        python3 << 'EOF'
 import json
 with open('results/python.sarif', encoding='utf-8') as f:
     data = json.load(f)
@@ -109,7 +111,7 @@ for run in data.get('runs', []):
         print(f"ruleId: {r.get('ruleId')}")
         print(f"message: {r.get('message')}")
         print('---')
-PY
+EOF
 
     - name: Filter CodeQL SARIF for decrypt-specific weak crypto alerts
       run: python3 .github/codeql/filter_codeql_sarif.py results results/filtered.sarif
