@@ -27,8 +27,8 @@ def read_file_lines(file_path):
         return []
 
 
-def code_contains_decrypt(result):
-    """Check if the actual source code at the result location contains 'decrypt'."""
+def code_contains_snippet(result, needle):
+    """Check if the actual source code at the result location contains a string."""
     locations = result.get("locations", [])
     if not isinstance(locations, list):
         return False
@@ -56,31 +56,69 @@ def code_contains_decrypt(result):
         start_line = region.get("startLine", 1)
         end_line = region.get("endLine", start_line)
         
-        # Read the file and check if 'decrypt' appears in the range
+        # Read the file and check if the configured snippet appears in the range
         lines = read_file_lines(file_path)
         if lines:
             # Convert 1-indexed line numbers to 0-indexed
             relevant_lines = lines[start_line - 1 : end_line]
             code_snippet = "".join(relevant_lines)
-            if "decrypt" in code_snippet.lower():
+            if needle.lower() in code_snippet.lower():
                 return True
     
     return False
 
 
-def should_remove_result(result):
+def load_filter_config(path):
+    if not os.path.isfile(path):
+        return []
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+    except Exception as exc:
+        print(f"Warning: failed to load filter config {path}: {exc}", file=sys.stderr)
+        return []
+
+    if not isinstance(config, list):
+        print(f"Warning: filter config {path} must be a list of objects", file=sys.stderr)
+        return []
+
+    filters = []
+    for item in config:
+        if not isinstance(item, dict):
+            continue
+        rule_id = item.get("rule_id")
+        needle = item.get("needle")
+        if isinstance(rule_id, str) and isinstance(needle, str):
+            filters.append({"rule_id": rule_id, "needle": needle})
+
+    return filters
+
+
+def should_remove_result(result, filters):
     if not isinstance(result, dict):
         return False
 
-    rule_id = result.get("ruleId")
-    if rule_id != "py/weak-cryptographic-algorithm":
+    result_rule_id = result.get("ruleId")
+    if not isinstance(result_rule_id, str):
         return False
 
-    # Check if the actual source code contains 'decrypt'
-    return code_contains_decrypt(result)
+    for filter_item in filters:
+        rule_id = filter_item.get("rule_id")
+        needle = filter_item.get("needle")
+        if not isinstance(rule_id, str) or not isinstance(needle, str):
+            continue
+        if result_rule_id != rule_id:
+            continue
+
+        # Check if the actual source code contains the configured snippet
+        if code_contains_snippet(result, needle):
+            return True
+
+    return False
 
 
-def filter_sarif(data):
+def filter_sarif(data, filters):
     if not isinstance(data, dict) or "runs" not in data:
         return data, 0
 
@@ -92,7 +130,7 @@ def filter_sarif(data):
 
         filtered = []
         for result in results:
-            if should_remove_result(result):
+            if should_remove_result(result, filters):
                 removed += 1
                 continue
             filtered.append(result)
@@ -120,6 +158,7 @@ def main():
 
     input_path = sys.argv[1]
     output_path = sys.argv[2]
+    config_path = sys.argv[3] if len(sys.argv) == 4 else ".github/codeql/filter_config.json"
 
     sarif_files = find_sarif_files(input_path)
     if len(sarif_files) != 1:
@@ -128,14 +167,18 @@ def main():
             f"Found {len(sarif_files)}: {sarif_files}"
         )
 
+    filters = load_filter_config(config_path)
+    if not filters:
+        filters = [{"rule_id": "py/weak-cryptographic-algorithm", "needle": "cipher.decrypt"}]
+
     sarif_file = sarif_files[0]
     data = load_sarif(sarif_file)
-    filtered_data, removed = filter_sarif(data)
+    filtered_data, removed = filter_sarif(data, filters)
     save_sarif(filtered_data, output_path)
 
     print(f"Filtered SARIF file: {sarif_file}")
     print(f"Wrote filtered SARIF to: {output_path}")
-    print(f"Removed {removed} py/weak-cryptographic-algorithm result(s) from code containing 'decrypt'.")
+    print(f"Removed {removed} py/weak-cryptographic-algorithm result(s) from code containing 'cipher.decrypt'.")
 
 
 if __name__ == "__main__":

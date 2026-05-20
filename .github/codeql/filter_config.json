@@ -1,0 +1,10 @@
+[
+  {
+    "rule_id": "py/weak-cryptographic-algorithm",
+    "needle": "cipher.decrypt"
+  },
+  {
+    "rule_id": "py/insecure-temporary-file",
+    "needle": "tempfile.mktemp"
+  }
+]
