@@ -1,7 +1,8 @@
 import hashlib
 
-data = b"something"
-sha1_obj = hashlib.sha1(data)
+session_id = "user-session-12345"
+session_bytes = session_id.encode("utf-8")
+sha1_obj = hashlib.sha1(session_bytes)
 
 # Raw bytes
 digest_bytes = sha1_obj.digest()
