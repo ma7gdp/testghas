@@ -96,6 +96,17 @@ def main():
     print(f"Wrote filtered SARIF to: {output_path}")
     print(f"Removed {removed} py/weak-cryptographic-algorithm result(s) containing 'decrypt'.")
 
+    # name: Print filtered SARIF summary
+    # run: python3 - <<'PY'
+    # import json
+    # with open('results/filtered.sarif', encoding='utf-8') as f:
+    #     data = json.load(f)
+    # for run in data.get('runs', []):
+    #     for r in run.get('results', []):
+    #         if r.get('ruleId') == 'py/weak-cryptographic-algorithm':
+    #             print(json.dumps(r, indent=2))
+    # PY
+
 
 if __name__ == "__main__":
     main()
