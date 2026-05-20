@@ -127,8 +127,6 @@ def set_result_severity_low(result):
         result["properties"] = {}
 
     result["properties"]["problem.severity"] = "low"
-    result["properties"]["securitySeverity"] = "low"
-    result["properties"]["security-severity"] = "low"
 
 
 def filter_sarif(data, filters):
