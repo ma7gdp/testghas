@@ -1,0 +1,2 @@
+API_KEY = "AKIAEXAMPLEKEY123456"
+print(f"Using API key: {API_KEY}")
