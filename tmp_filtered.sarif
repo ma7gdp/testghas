@@ -1,0 +1,27 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "rules": []
+        }
+      },
+      "results": [
+        {
+          "ruleId": "py/weak-cryptographic-algorithm",
+          "message": {
+            "text": "Use of weak crypto in encrypt"
+          }
+        },
+        {
+          "ruleId": "py/other-rule",
+          "message": {
+            "text": "Other issue"
+          }
+        }
+      ]
+    }
+  ]
+}
