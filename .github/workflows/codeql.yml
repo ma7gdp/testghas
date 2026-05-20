@@ -74,7 +74,7 @@ jobs:
         # Prefix the list here with "+" to use these queries and those in the config file.
 
         # For more details on CodeQL's query packs, refer to: https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
-        queries: security-extended,security-and-quality
+        queries: security-extended,security-and-quality,+./.github/codeql/custom-queries
 
     # If the analyze step fails for one of the languages you are analyzing with
     # "We were unable to automatically build your code", modify the matrix above
@@ -98,18 +98,3 @@ jobs:
       with:
         category: "/language:${{matrix.language}}"
 
-    - name: Dismiss CodeQL alerts mentioning 'decrypt'
-      if: always()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        echo "Dismissing CodeQL alerts that mention 'decrypt'..."
-        # Fetch alerts, filter those whose most recent message contains 'decrypt' (case-insensitive),
-        # then dismiss them via the Code Scanning Alerts API. Requires `security-events: write` permission.
-        gh api repos/${{ github.repository }}/code-scanning/alerts --paginate \
-          | jq -r '.[] | select((.most_recent_instance.message.text // "") | test("decrypt"; "i")) | .number' \
-          | while read -r num; do
-              echo "Dismissing alert #$num"
-              gh api -X PATCH repos/${{ github.repository }}/code-scanning/alerts/$num \
-                -f state=dismissed -f dismissed_reason=used_in_tests || true
-            done
